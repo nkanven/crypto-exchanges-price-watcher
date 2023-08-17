@@ -1,60 +1,60 @@
-Готовый код для загрузки цен с 4 бирж
+Ready code for downloading prices from 4 exchanges
 - Binance
 - Gate
 - Huobi
 - KuCoin
 <br>
-С чего начать:<br>
-1. Создать базу данных из файла price.sql<br>
-2. Внести изменения в настройки<br>
-3. Установить компоненты для запуска Python<br>
+Where to start:<br>
+1. Create a database from the price.sql file<br>
+2. Make changes to the settings<br>
+3. Install components to run Python<br>
 
 ```CMD
 pip install mysqlclient
 pip install requests
 ```
 
-Настройка :
+Customisation :
 ```Python
-    # Массив настроек
+    # Array of settings
     setting = {
-        "refreshTime":180, # Время повторной загрузки в секундах
-        "host":"localhost", # Хост для MySQL
-        "user":"root", # Логин MySQL
-        "passwd":"", # Пароль MySQL
-        "db":"price", # База MySQL
-        "checkbox": { # Все чекБоксы
-            "history_1m": { # Системное имя
-                "name": "Каждую минуту, но не более суток", # Название
-                "act" : False # Состояние при запуске
+        "refreshTime":180, # Reloading time in seconds
+        "host":"localhost", # Host for MySQL
+        "user":"root", # MySQL login
+        "passwd":"", # MySQL password
+        "db":"price", # MySQL database
+        "checkbox": { # All CheckBoxes
+            "history_1m": { # System name
+                "name": "Every minute but not more than twenty-four hours", # Title
+                "act" : False # Status at start-up
             },
-            "history_10m": { # Системное имя
-                "name": "Каждые 10 минут, но не более суток", # Название
-                "act" : True # Состояние при запуске
+            "history_10m": { # System name
+                "name": "Every 10 minutes but not more than 24 hours", # Title
+                "act" : True # Status at start-up
             },
-            "history_1h": { # Системное имя
-                "name": "Каждый час, но не более суток", # Название
-                "act" : True # Состояние при запуске
+            "history_1h": { # System name
+                "name": "Every hour but not more than twenty-four hours", # Title
+                "act" : True # Status at start-up
             },
-            "history_1d": { # Системное имя
-                "name": "Раз в день, всегда", # Название
-                "act" : True # Состояние при запуске
+            "history_1d": { # System name
+                "name": "Once a day, always," # Title
+                "act" : True # Status at start-up
             }
         },
         "time_load": 0
     }
 ```
 
-Настройка автозапуска загрузки
+Configuring boot autorun
 ```Python
    birzi = {
         "Binance": {
-            "auto_start":True, # Авто старт загрузки
-            "count_load":0, # Колчиество загрузок с момента старта
-            "icon":"Binance.png", # Иконка
-            "last_time":0, # Последнее успешная загрузка
-            "number":1, # Номер биржи в базе
-            "log":"" # Последнее сообщение после загрузки
+            "auto_start":True, # Auto load start
+            "count_load":0, # Number of downloads since the start
+            "icon":"Binance.png", # Icon
+            "last_time":0, # Last successful download
+            "number":1, # Exchange number in the database
+            "log":"" # Last message after uploading
             },
         "Gate": {
             "auto_start":True,
