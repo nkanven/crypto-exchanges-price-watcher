@@ -1,12 +1,17 @@
+import datetime
 import string
+import re
 import threading
 import time
 from mysql import connector
+from mysql.connector.errors import ProgrammingError, InterfaceError
+from _mysql_connector import MySQLInterfaceError
 import requests
 from http.server import HTTPServer, BaseHTTPRequestHandler  # Web server
 from urllib.parse import urlparse, parse_qs  # Address bar processing
 import shutil  # File access
 import json  # Processing json
+import logging
 from logger_setup import logger
 
 
@@ -14,7 +19,7 @@ from logger_setup import logger
 class Setting:
     settings_file = open("settings.json", "r")
     setting = json.loads(settings_file.read())
-    birzi = setting['exchanges']
+    exchanges = setting['exchanges']
     # {
     #     "Binance": {
     #         "auto_start": True,  # Autoload start
@@ -102,7 +107,7 @@ class API:
             if get_array['act'][0] == 'setting':
                 return API.setting(http)
             elif get_array['act'][0] == 'birzi':
-                return API.birzi(http)
+                return API.exchanges(http)
             elif get_array['act'][0] == 'onoff':
                 return API.onoff(http, get_array)
             elif get_array['act'][0] == 'time_load':
@@ -140,16 +145,16 @@ class API:
     # Switching the exchange loading      
     def onoff(self, http, get_array):
         # Let's change the switch
-        if Setting.birzi[get_array['name'][0]]['auto_start']:
-            Setting.birzi[get_array['name'][0]]['auto_start'] = False
+        if Setting.exchanges[get_array['name'][0]]['auto_start']:
+            Setting.exchanges[get_array['name'][0]]['auto_start'] = False
         else:
-            Setting.birzi[get_array['name'][0]]['auto_start'] = True
+            Setting.exchanges[get_array['name'][0]]['auto_start'] = True
         # We'll send the new settings
-        API.send_json(http, Setting.birzi)
+        API.send_json(http, Setting.exchanges)
 
     # List of exchanges
-    def birzi(self, http):
-        API.send_json(http, Setting.birzi)
+    def exchanges(self, http):
+        API.send_json(http, Setting.exchanges)
 
     # Settings list
     def setting(self, http):
@@ -198,7 +203,7 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(html.encode())
 
 
-class Birzi:
+class Exchanges:
     def __init__(self):
         pass
 
@@ -228,13 +233,13 @@ class Birzi:
                 except Exception as inst:
                     print(inst)  # If there is an error accessing the result
 
-            save_price(price, Setting.birzi['Binance']['number'])
+            save_price(price, Setting.exchanges['Binance']['number'])
 
             # Let's report on progress
 
-            Setting.birzi['Binance']["count_load"] += 1
-            Setting.birzi['Binance']["log"] = f"Downloaded Binance for {round(time.time() - time_start, 3)} sec."
-            log(Setting.birzi['Binance']["log"], Setting.birzi['Binance']['number'])
+            Setting.exchanges['Binance']["count_load"] += 1
+            Setting.exchanges['Binance']["log"] = f"Downloaded Binance for {round(time.time() - time_start, 3)} sec."
+            log(Setting.exchanges['Binance']["log"], Setting.exchanges['Binance']['number'])
         except Exception as inst:
             print("Exception ", inst)
 
@@ -253,11 +258,11 @@ class Birzi:
             except Exception as inst:
                 print(inst)  # If there is an error accessing the result
 
-        save_price(price, Setting.birzi['Gate']['number'])
+        save_price(price, Setting.exchanges['Gate']['number'])
 
-        Setting.birzi['Gate']["count_load"] += 1
-        Setting.birzi['Gate']["log"] = f"Loading Gate for {round(time.time() - time_start, 3)} sec."
-        log(Setting.birzi['Gate']["log"], Setting.birzi['Gate']['number'])
+        Setting.exchanges['Gate']["count_load"] += 1
+        Setting.exchanges['Gate']["log"] = f"Loading Gate for {round(time.time() - time_start, 3)} sec."
+        log(Setting.exchanges['Gate']["log"], Setting.exchanges['Gate']['number'])
 
     # Downloading Huobi
     def Huobi(self):
@@ -273,12 +278,12 @@ class Birzi:
         for symbol in price_list['data']:
             price.append([symbol['symbol'], symbol['close']])
 
-        save_price(price, Setting.birzi['Huobi']['number'])
+        save_price(price, Setting.exchanges['Huobi']['number'])
 
         # Let's report on progress
-        Setting.birzi['Huobi']["count_load"] += 1
-        Setting.birzi['Huobi']["log"] = f"Loading Huobi for{round(time.time() - time_start, 3)} Sec."
-        log(Setting.birzi['Huobi']["log"], Setting.birzi['Huobi']['number'])
+        Setting.exchanges['Huobi']["count_load"] += 1
+        Setting.exchanges['Huobi']["log"] = f"Loading Huobi for{round(time.time() - time_start, 3)} Sec."
+        log(Setting.exchanges['Huobi']["log"], Setting.exchanges['Huobi']['number'])
 
     # Loading KuCoin
     def KuCoin(self):
@@ -294,21 +299,36 @@ class Birzi:
         for symbol in price_list['data']['ticker']:
             price.append([symbol['symbol'], symbol['last']])
 
-        save_price(price, Setting.birzi['KuCoin']['number'])
+        save_price(price, Setting.exchanges['KuCoin']['number'])
         # Let's report on progress
-        Setting.birzi['KuCoin']["count_load"] += 1
-        Setting.birzi['KuCoin']["log"] = f"Loading KuCoin for{round(time.time() - time_start, 3)} Sec."
-        log(Setting.birzi['KuCoin']["log"], Setting.birzi['KuCoin']['number'])
+        Setting.exchanges['KuCoin']["count_load"] += 1
+        Setting.exchanges['KuCoin']["log"] = f"Loading KuCoin for{round(time.time() - time_start, 3)} Sec."
+        log(Setting.exchanges['KuCoin']["log"], Setting.exchanges['KuCoin']['number'])
 
 
 # Database connection
 def connectDB():
     try:
-        connector.connect(host=Setting.setting["host"], user=Setting.setting["user"], passwd=Setting.setting["passwd"],
-                           db=Setting.setting["db"])
-    except Exception as inst:
-        print(inst)
+        with connector.connect(host=Setting.setting["host"], user=Setting.setting["user"],
+                               passwd=Setting.setting["passwd"]) as db:
+            db.cursor().execute('CREATE DATABASE IF NOT EXISTS exchange_prices')
+            db.cursor().execute('USE exchange_prices')
+            db.commit()
+            with open('price.sql', 'r') as sql_file:
+                # print(sql_file.read())
+                result_iterator = db.cursor().execute(sql_file.read(), multi=True)
+                for res in result_iterator:
+                    # print("Running query: ", res)  # Will print out a short representation of the query
+                    print(f"Affected {res.rowcount} rows")
+    except ProgrammingError as inst:
         logger.critical("Database connection error occurred", exc_info=True)
+    except MySQLInterfaceError as e:
+        logger.log(level=logging.INFO, msg="Unknown error occurred 4", exc_info=True)
+    except InterfaceError as e:
+        logger.info("Unknown error occurred 0", exc_info=True)
+    except Exception as inst:
+        logger.critical("Unknown error occurred 1", exc_info=True)
+
 
 # Let's calculate the price difference
 def price_difference(new: string, old: string):
@@ -324,56 +344,70 @@ def price_difference(new: string, old: string):
 
 
 # Let's save the list of prices under the exchange number
-def save_price(price: list, birza: int):
-    # Let's connect to the database
-    conn = connectDB()
-    cursor = conn.cursor()
+def save_price(price: list, exchange_id: int):
+    try:
+        crypto_price_old = {}
+        # Let's connect to the database
+        with connector.connect(host=Setting.setting["host"], user=Setting.setting["user"],
+                               passwd=Setting.setting["passwd"], db=Setting.setting["db"]) as db:
+            cursor = db.cursor()
+            # Let's create an array with old prices to calculate the price change for 24 hours
+            old_time = round(time.time()) - 86400 + 600  # Let's calculate the time - 24 hours in seconds
+            query = f"SELECT `symbol`, MIN(`price`), MIN(`last_update`) FROM `price_history_10m` WHERE `birza` = {birza} AND `last_update` BETWEEN {old_time} AND ({old_time} + 700) GROUP BY `symbol` ; "
+            # print(query)
+            cursor.execute(query)
+            # print("Row count ", cursor.rowcount)
+            result = [] if cursor.rowcount == 0 else cursor.fetchall()
+            for row in result:
+                crypto_price_old[row[0]] = float(row[1])
 
-    # Let's create an array with old prices to calculate the price change for 24 hours
-    old_time = round(time.time()) - 86400 + 600  # Let's calculate the time - 24 hours in seconds
-    cursor.execute(
-        f"SELECT `symbol`, `price`, MIN(`last_update`) FROM `price_history_10m` WHERE `birza` = {birza} AND `last_update` BETWEEN {old_time} AND ({old_time} + 700) GROUP BY `symbol` ; ")
-    result = cursor.fetchall()
-    crypto_price_old = {}
-    for row in result:
-        crypto_price_old[row[0]] = float(row[1])
+        with connector.connect(host=Setting.setting["host"], user=Setting.setting["user"],
+                               passwd=Setting.setting["passwd"], db=Setting.setting["db"]) as db:
+            cursor = db.cursor()
+            for symbol in price:
+                # Calculate the percentage change in price
+                n_now = datetime.datetime.now()
+                minute = f"{str(n_now.hour)}:{str(n_now.minute)}"
+                if symbol[0] in crypto_price_old:
+                    changes = price_difference(symbol[1], crypto_price_old[symbol[0]])
+                else:
+                    changes = 0
+                harmonized_symbol = re.sub(r"_|-|//", "", symbol[0].replace(" ", ""))
+                # This will clear the unread result from the cursor.
+                query = f"INSERT INTO `price` (`birza`, `symbol`, `price`, `harmonized_symbol`) VALUES ({exchange_id}, '{symbol[0]}', '{symbol[1]}', '{harmonized_symbol}') ON DUPLICATE KEY UPDATE price = '{symbol[1]}' , `prevDay` = {changes} ,last_update = CURRENT_TIMESTAMP;"
+                # print(query)
+                cursor.execute(query)  # Record the change in price
 
-    for symbol in price:
-        # Calculate the percentage change in price
-        if symbol[0] in crypto_price_old:
-            changes = price_difference(symbol[1], crypto_price_old[symbol[0]])
-        else:
-            changes = 0
-
-        cursor.execute(
-            f"INSERT INTO `price` (`birza`, `symbol`, `price`) VALUES ({birza}, '{symbol[0]}', '{symbol[1]}') ON DUPLICATE KEY UPDATE price = '{symbol[1]}' , `prevDay` = {changes} ,last_update = UNIX_TIMESTAMP();")  # Record the change in price
-
-        if Setting.setting["checkbox"]["history_1h"]["act"]:
-            cursor.execute(
-                f"INSERT INTO `price_history_1h` (`birza`, `symbol`, `price`) VALUES ({birza}, '{symbol[0]}', {symbol[1]}) ON DUPLICATE KEY UPDATE price = {symbol[1]} , last_update = UNIX_TIMESTAMP();")
-        if Setting.setting["checkbox"]["history_1d"]["act"]:
-            cursor.execute(
-                f"INSERT INTO `price_history_1d` (`birza`, `symbol`, `date_day`, `price`) VALUES ({birza}, '{symbol[0]}', now(), {symbol[1]}) ON DUPLICATE KEY UPDATE price = {symbol[1]} ;")
-        if Setting.setting["checkbox"]["history_10m"]["act"]:
-            cursor.execute(
-                f"INSERT INTO `price_history_10m` (`birza`, `symbol`, `minut`, `price`) VALUES ({birza}, '{symbol[0]}', concat(SUBSTRING(date_format(now(),'%H:%i'),1,4), '0'), {symbol[1]}) ON DUPLICATE KEY UPDATE price = {symbol[1]} , last_update = UNIX_TIMESTAMP();")
-        if Setting.setting["checkbox"]["history_1m"]["act"]:
-            cursor.execute(
-                f"INSERT INTO `price_history_1m` (`birza`, `symbol`, `minut`, `price`) VALUES ({birza}, '{symbol[0]}', date_format(current_timestamp(),'%H:%i'), {symbol[1]}) ON DUPLICATE KEY UPDATE price = {symbol[1]} , last_update = UNIX_TIMESTAMP();")
-
-    conn.commit()
-    conn.close()
+                # if Setting.setting["checkbox"]["history_1h"]["act"]:
+                #     query = f"INSERT INTO `price_history_1h` (`birza`, `symbol`, `price`, `hour`) VALUES ({birza}, '{symbol[0]}', {symbol[1]}, {int(n_now.hour)}) ON DUPLICATE KEY UPDATE price = {symbol[1]} , last_update = CURRENT_TIMESTAMP;"
+                #     # print(query)
+                #     cursor.execute(query)
+                # if Setting.setting["checkbox"]["history_1d"]["act"]:
+                #     query = f"INSERT INTO `price_history_1d` (`birza`, `symbol`, `date_day`, `price`) VALUES ({birza}, '{symbol[0]}', NOW(), {symbol[1]}) ON DUPLICATE KEY UPDATE price = {symbol[1]} ;"
+                #     # print(query)
+                #     cursor.execute(query)
+                # if Setting.setting["checkbox"]["history_10m"]["act"]:
+                #     query = f"INSERT INTO `price_history_10m` (`birza`, `symbol`, `minut`, `price`) VALUES ({birza}, '{symbol[0]}', '{minute}', {symbol[1]}) ON DUPLICATE KEY UPDATE price = {symbol[1]} , last_update = CURRENT_TIMESTAMP;"
+                #     # print(query)
+                #     cursor.execute(query)
+                if Setting.setting["checkbox"]["history_1m"]["act"]:
+                    query = f"INSERT INTO `price_history_1m` (`exchange_id`, `symbol`, `minut`, `price`, `harmonized_symbol`) VALUES ({exchange_id}, '{symbol[0]}', '{minute}', {symbol[1]}, '{harmonized_symbol}') ON DUPLICATE KEY UPDATE price = {symbol[1]} , last_update = CURRENT_TIMESTAMP;"
+                    # print(query)
+                    cursor.execute(query)
+                db.commit()
+    except Exception as e:
+        logger.critical("Unknown error occurred 2", exc_info=True)
 
 
 # Infinite loop for exchanges
-def while_Birzi():
+def exchanges_loop():
     # Let's move the start back in time so that the first boot happens immediately
     start_time = round(time.time()) - Setting.setting["refreshTime"]
 
     while True:
         timer = start_time + Setting.setting["refreshTime"] - round(time.time())
         if timer <= 0:  # It's time to launch
-            loadAllBirzi()
+            load_exchanges()
             Setting.setting['time_load'] = 0
             start_time = round(time.time())  # Let's reset the clock
         else:  # We'll wait another second.
@@ -382,31 +416,32 @@ def while_Birzi():
 
 
 # Uploading exchanges
-def loadAllBirzi():
-    exchanges = Birzi()
-    if Setting.birzi['Binance']['auto_start']:
+def load_exchanges():
+    exchanges = Exchanges()
+    if Setting.exchanges['Binance']['auto_start']:
         threading.Thread(target=exchanges.Binance).start()
-    # if Setting.birzi['Gate']['auto_start']:
-    #     threading.Thread(target=Birzi.Gate).start()
-    # if Setting.birzi['Huobi']['auto_start']:
-    #     threading.Thread(target=Birzi.Huobi).start()
-    # if Setting.birzi['KuCoin']['auto_start']:
-    #     threading.Thread(target=Birzi.KuCoin).start()
+    if Setting.exchanges['Gate']['auto_start']:
+        threading.Thread(target=exchanges.Gate).start()
+    if Setting.exchanges['Huobi']['auto_start']:
+        threading.Thread(target=exchanges.Huobi).start()
+    if Setting.exchanges['KuCoin']['auto_start']:
+        threading.Thread(target=exchanges.KuCoin).start()
 
 
 def log(message: string, birza: int):
-    # conn = connectDB()
-    # cursor = conn.cursor()
-    # cursor.execute(f"INSERT INTO `log` (`message`, `birza`, `time_create`) VALUES ('{message}', {birza}, UNIX_TIMESTAMP());")
-    # conn.commit()
-    # conn.close()
+    with connector.connect(host=Setting.setting["host"], user=Setting.setting["user"],
+                           passwd=Setting.setting["passwd"], db=Setting.setting["db"]) as db:
+        cursor = db.cursor()
+        cursor.execute(f"INSERT INTO `log` (`message`, `birza`, `time_create`) VALUES ('{message}', {birza}, CURRENT_TIMESTAMP);")
+        db.commit()
     print(message)
 
 
 if __name__ == '__main__':
     # Let's start an infinite loop to run exchanges
-    threading.Thread(target=while_Birzi).start()
-
+    connectDB()
     # Start the web server to control the operation
-    httpd = HTTPServer(('', 8000), HTTPRequestHandler)
-    httpd.serve_forever()
+    httpd = HTTPServer(('0.0.00', 8000), HTTPRequestHandler)
+    # httpd.serve_forever()
+    threading.Thread(target=exchanges_loop).start()
+    threading.Thread(target=httpd.serve_forever)

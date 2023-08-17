@@ -2,3 +2,6 @@ test.py
 .vscode/launch.json
 .vscode/settings.json
 *.json
+__pycache__/
+.idea
+logs/
