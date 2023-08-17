@@ -7,72 +7,76 @@ from http.server import HTTPServer, BaseHTTPRequestHandler  # Web server
 from urllib.parse import urlparse, parse_qs  # Address bar processing
 import shutil  # File access
 import json  # Processing json
+from logger_setup import logger
 
 
 # An array of all our exchanges and their settings
 class Setting:
-    birzi = {
-        "Binance": {
-            "auto_start": True,  # Autoload start
-            "count_load": 0,  # Number of downloads since the start
-            "icon": "Binance.png",  # Icon
-            "last_time": 0,  # Last successful download
-            "number": 1,  # Exchange number in the database
-            "log": ""  # Last message after uploading
-        },
-        "Gate": {
-            "auto_start": True,
-            "count_load": 0,
-            "icon": "Gate.png",
-            "last_time": 0,
-            "number": 2,
-            "log": ""
-        },
-        "Huobi": {
-            "auto_start": True,
-            "count_load": 0,
-            "icon": "Huobi.png",
-            "last_time": 0,
-            "number": 3,
-            "log": ""
-        },
-        "KuCoin": {
-            "auto_start": True,
-            "count_load": 0,
-            "icon": "KuCoin.png",
-            "last_time": 0,
-            "number": 4,
-            "log": ""
-        }
-    }
+    settings_file = open("settings.json", "r")
+    setting = json.loads(settings_file.read())
+    birzi = setting['exchanges']
+    # {
+    #     "Binance": {
+    #         "auto_start": True,  # Autoload start
+    #         "count_load": 0,  # Number of downloads since the start
+    #         "icon": "Binance.png",  # Icon
+    #         "last_time": 0,  # Last successful download
+    #         "number": 1,  # Exchange number in the database
+    #         "log": ""  # Last message after uploading
+    #     },
+    #     "Gate": {
+    #         "auto_start": True,
+    #         "count_load": 0,
+    #         "icon": "Gate.png",
+    #         "last_time": 0,
+    #         "number": 2,
+    #         "log": ""
+    #     },
+    #     "Huobi": {
+    #         "auto_start": True,
+    #         "count_load": 0,
+    #         "icon": "Huobi.png",
+    #         "last_time": 0,
+    #         "number": 3,
+    #         "log": ""
+    #     },
+    #     "KuCoin": {
+    #         "auto_start": True,
+    #         "count_load": 0,
+    #         "icon": "KuCoin.png",
+    #         "last_time": 0,
+    #         "number": 4,
+    #         "log": ""
+    #     }
+    # }
 
-    # Array of settings
-    setting = {
-        "refreshTime": 180,  # Reloading time in seconds
-        "host": "localhost",  # Host for MySQL
-        "user": "root",  # MySQL login
-        "passwd": "",  # MySQL password
-        "db": "price",  # MySQL database
-        "checkbox": {  # All CheckBoxes
-            "history_1m": {  # System name
-                "name": "Every minute, but no more than 24 hours",  # Title
-                "act": False  # Status at start-up
-            },
-            "history_10m": {  # Системное имя
-                "name": "Every 10 minutes, but no more than 24 hours.",  # Title
-                "act": True  # Status at start-up
-            },
-            "history_1h": {  # Системное имя
-                "name": "Every hour, but no more than 24 hours",  # Title
-                "act": True  # Status at start-up
-            },
-            "history_1d": {  # System name
-                "name": "Once a day, always.",  # Title
-                "act": True  # Status at start-up
-            }
-        },
-        "time_load": 0
-    }
+    # # Array of settings
+    # setting = {
+    #     "refreshTime": 180,  # Reloading time in seconds
+    #     "host": "localhost",  # Host for MySQL
+    #     "user": "root",  # MySQL login
+    #     "passwd": "",  # MySQL password
+    #     "db": "price",  # MySQL database
+    #     "checkbox": {  # All CheckBoxes
+    #         "history_1m": {  # System name
+    #             "name": "Every minute, but no more than 24 hours",  # Title
+    #             "act": False  # Status at start-up
+    #         },
+    #         "history_10m": {  # Системное имя
+    #             "name": "Every 10 minutes, but no more than 24 hours.",  # Title
+    #             "act": True  # Status at start-up
+    #         },
+    #         "history_1h": {  # Системное имя
+    #             "name": "Every hour, but no more than 24 hours",  # Title
+    #             "act": True  # Status at start-up
+    #         },
+    #         "history_1d": {  # System name
+    #             "name": "Once a day, always.",  # Title
+    #             "act": True  # Status at start-up
+    #         }
+    #     },
+    #     "time_load": 0
+    # }
 
 
 class Img:
@@ -136,7 +140,7 @@ class API:
     # Switching the exchange loading      
     def onoff(self, http, get_array):
         # Let's change the switch
-        if (Setting.birzi[get_array['name'][0]]['auto_start']):
+        if Setting.birzi[get_array['name'][0]]['auto_start']:
             Setting.birzi[get_array['name'][0]]['auto_start'] = False
         else:
             Setting.birzi[get_array['name'][0]]['auto_start'] = True
@@ -299,9 +303,12 @@ class Birzi:
 
 # Database connection
 def connectDB():
-    return connector.connect(host=Setting.setting["host"], user=Setting.setting["user"], passwd=Setting.setting["passwd"],
+    try:
+        connector.connect(host=Setting.setting["host"], user=Setting.setting["user"], passwd=Setting.setting["passwd"],
                            db=Setting.setting["db"])
-
+    except Exception as inst:
+        print(inst)
+        logger.critical("Database connection error occurred", exc_info=True)
 
 # Let's calculate the price difference
 def price_difference(new: string, old: string):
@@ -341,16 +348,16 @@ def save_price(price: list, birza: int):
         cursor.execute(
             f"INSERT INTO `price` (`birza`, `symbol`, `price`) VALUES ({birza}, '{symbol[0]}', '{symbol[1]}') ON DUPLICATE KEY UPDATE price = '{symbol[1]}' , `prevDay` = {changes} ,last_update = UNIX_TIMESTAMP();")  # Record the change in price
 
-        if (Setting.setting["checkbox"]["history_1h"]["act"]):
+        if Setting.setting["checkbox"]["history_1h"]["act"]:
             cursor.execute(
                 f"INSERT INTO `price_history_1h` (`birza`, `symbol`, `price`) VALUES ({birza}, '{symbol[0]}', {symbol[1]}) ON DUPLICATE KEY UPDATE price = {symbol[1]} , last_update = UNIX_TIMESTAMP();")
-        if (Setting.setting["checkbox"]["history_1d"]["act"]):
+        if Setting.setting["checkbox"]["history_1d"]["act"]:
             cursor.execute(
                 f"INSERT INTO `price_history_1d` (`birza`, `symbol`, `date_day`, `price`) VALUES ({birza}, '{symbol[0]}', now(), {symbol[1]}) ON DUPLICATE KEY UPDATE price = {symbol[1]} ;")
-        if (Setting.setting["checkbox"]["history_10m"]["act"]):
+        if Setting.setting["checkbox"]["history_10m"]["act"]:
             cursor.execute(
                 f"INSERT INTO `price_history_10m` (`birza`, `symbol`, `minut`, `price`) VALUES ({birza}, '{symbol[0]}', concat(SUBSTRING(date_format(now(),'%H:%i'),1,4), '0'), {symbol[1]}) ON DUPLICATE KEY UPDATE price = {symbol[1]} , last_update = UNIX_TIMESTAMP();")
-        if (Setting.setting["checkbox"]["history_1m"]["act"]):
+        if Setting.setting["checkbox"]["history_1m"]["act"]:
             cursor.execute(
                 f"INSERT INTO `price_history_1m` (`birza`, `symbol`, `minut`, `price`) VALUES ({birza}, '{symbol[0]}', date_format(current_timestamp(),'%H:%i'), {symbol[1]}) ON DUPLICATE KEY UPDATE price = {symbol[1]} , last_update = UNIX_TIMESTAMP();")
 
