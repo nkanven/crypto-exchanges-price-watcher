@@ -2,10 +2,10 @@
 import websocket
 import json
 import time
-import MySQLdb
+import mysql
 
 # Подключимся к базе данных
-db = MySQLdb.connect(host="localhost", user="root", passwd="", db="price")
+db = connector.connect(host="localhost", user="root", passwd="", db="price")
 cursor = db.cursor()
 
 def on_message(ws, message):

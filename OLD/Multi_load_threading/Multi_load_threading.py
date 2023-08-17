@@ -1,6 +1,6 @@
 import threading
 import time
-import MySQLdb
+import mysql
 import requests
 
 setting = {
@@ -9,7 +9,7 @@ setting = {
 
 #Подключение к базе данных
 def connectDB():
-    return MySQLdb.connect(host="localhost", user="root", passwd="", db="price")
+    return connector.connect(host="localhost", user="root", passwd="", db="price")
 
 # Функция загрузки цен с биржи Binance
 def load_Binance():

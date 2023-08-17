@@ -17,7 +17,7 @@ pip install requests
 Customisation :
 ```Python
     # Array of settings
-    setting = {
+setting = {
         "refreshTime":180, # Reloading time in seconds
         "host":"localhost", # Host for MySQL
         "user":"root", # MySQL login

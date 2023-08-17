@@ -1,12 +1,12 @@
 import time
 import json
 import websocket
-import MySQLdb
+import mysql
 import requests
 import gzip
 
 #Подключимся к базе данных
-db=MySQLdb.connect(host="localhost", user="root", passwd="", db="price")
+db=connector.connect(host="localhost", user="root", passwd="", db="price")
 cursor = db.cursor()
 
 count_subbed = 0 # Количество подписок

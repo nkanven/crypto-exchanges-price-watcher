@@ -1,10 +1,10 @@
 import time
 import requests
 import json
-import MySQLdb
+import mysql
 
 #Подключимся к базе данных
-db=MySQLdb.connect(host="localhost", user="root", passwd="", db="price")
+db=connector.connect(host="localhost", user="root", passwd="", db="price")
 cursor = db.cursor()
 
 #Функция загрузки цен

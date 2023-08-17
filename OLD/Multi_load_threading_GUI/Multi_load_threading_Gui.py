@@ -1,7 +1,7 @@
 import string
 import threading
 import time
-import MySQLdb
+import mysql
 import requests
 import tkinter
 from functools import partial
@@ -66,7 +66,7 @@ img = {}
 #Подключение к базе данных
 def connectDB():
     global setting
-    return MySQLdb.connect(host=setting["host"], user=setting["user"], passwd=setting["passwd"], db=setting["db"])
+    return connector.connect(host=setting["host"], user=setting["user"], passwd=setting["passwd"], db=setting["db"])
 
 # Расчитаем разницу цен
 def price_difference(new : string, old : string):

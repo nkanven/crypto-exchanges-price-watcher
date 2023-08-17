@@ -1,11 +1,11 @@
 import time
 import json
 import websocket
-import MySQLdb
+import mysql
 import requests
 
 #Подключимся к базе данных
-db=MySQLdb.connect(host="localhost", user="root", passwd="", db="price2")
+db=connector.connect(host="localhost", user="root", passwd="", db="price2")
 cursor = db.cursor()
 
 count_message = 0 # Количество сообщений
