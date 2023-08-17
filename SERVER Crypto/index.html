@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <link rel="icon" href="favicon.ico">
-<title>Загрузка цен с бирж</title>
+<title> Downloading prices from exchanges</title>
 </head>
 <style>
 	body{
@@ -13,7 +13,7 @@
 		font-size: 13px;
 	}
 
-	/* Блок , ссылки как кнопки */
+	/* Block , links as buttons */
 	.button {
 		display: inline-block;
 		font-family: arial,sans-serif;
@@ -74,19 +74,19 @@
 
 	class Get{
 		//*******************************************************************************************
-		// Загрузим список бирж
+		// Download the list of exchanges
 		static birzi(){
 			$.get("./api/?act=birzi", function(data) {
-				// Покажем результат
+				// Let's show you the result
 				HTML.listBirzi(data);
 
-				// После загрузки бирж, загрузим список настроек с чекбоксами.
+				// After downloading the exchanges, load the list of settings with checkboxes.
 				Get.checkbox();
 			});
 		}
 
 		//*******************************************************************************************
-		// Загрузим список бирж и обновим данные у списка, счетчик количества загрузок и последний лог
+		// Let's load the list of exchanges and update the data at the list, the counter of the number of downloads and the last log
 		static refresh(){
 			$.get("./api/?act=birzi", function(data) {
 				HTML.updateCountLoad(data);
@@ -94,7 +94,7 @@
 		}
 
 		//*******************************************************************************************
-		// Загрузим текущее время следующей загрузки
+		// Load the current time of the next download
 		static time(){
 			$.get("./api/?act=time_load", function(data) {
 				HTML.time(data);
@@ -102,7 +102,7 @@
 		}
 
 		//*******************************************************************************************
-		// Загрузим список чекбоксов
+		// Load the list of checkboxes
 		static checkbox(){
 			$.get("./api/?act=checkbox", function(data) {
 				HTML.checkbox(data);
@@ -110,7 +110,7 @@
 		}
 
 		//*******************************************************************************************
-		// Переключаем активность загрузки бота
+		// Switching the bot's loading activity
 		static onoff(name){
 			$.get(`./api/?act=onoff&name=${name}`, function(data) {
 				if(data[name]['auto_start']){
@@ -122,7 +122,7 @@
 		}
 
 		//*******************************************************************************************
-		// Переключаем активность загрузки бота
+		// Switching the bot's loading activity
 		static checkboxOnOff(name){
 			$.get(`./api/?act=checkboxOnOff&name=${name}`, function(data) {
 				if(data[name]['act']){
@@ -137,7 +137,7 @@
 	class HTML{
 
 		//*******************************************************************************************
-		// Покажем счетчик времени повторной загрузки цен
+		// Let's show the counter of the price reloading time
 		static time(setting){
 			if(setting['time_load']<=1){
 				Get.refresh();
@@ -146,9 +146,9 @@
 		}
 
 		//*******************************************************************************************
-		// Обновим у списка бирж, счетчик загрузок и последнее сообщение лога
+		// Let's update the list of exchanges, the download counter and the last log message
 		static updateCountLoad(birzi){
-			// Если есть список бирж, то покажем его
+			// If there is a list of exchanges, we'll show it to you
 			if(Object.keys(birzi).length>0){
 				for (let key in birzi) {
 					$(`#${key}_count_load`).html(birzi[key]['count_load']);
@@ -158,7 +158,7 @@
 		}
 
 		//*******************************************************************************************
-		// Создаём блок с биржами
+		// Create a block with exchanges
 		static listBirzi(birzi){
 			let html = `<table class=table_block>
 				<tr>
@@ -169,16 +169,16 @@
 					<td><img src="img/book2.png" class=img_icon></td>
 				</tr>`;
 			
-			// Ошибка в работе
+			// Error in operation
 			if('code' in birzi){
 				$('#list_birzi').html("Ошибка загрузки");
 				return false;
 			}
 
-			// Если есть список бирж, то покажем его
+			// If there is a list of exchanges, we'll show it to you
 			if(Object.keys(birzi).length>0){
 				for (let key in birzi) {
-					// Проверим состояние запуска загрузки для биржи
+					// Let's check the startup status of the download for the exchange
 					let img_start = 'Off';
 					if(birzi[key]['auto_start']){
 						img_start = 'On';
@@ -196,18 +196,18 @@
 			}
 			html +=`
 				<tr>
-					<td colspan=5 class=td_center>Следующее обновление через <b><span id="time_load">0</span></b></td>
+					<td colspan=5 class=td_center>The next update in<b><span id="time_load">0</span></b></td>
 				</tr>
 			</table>`;
 
 			$('#list_birzi').html(html);
 			
-			// Каждую секунду получаем данные с сервера
+			// Every second we get data from the server
 			var time = setInterval(function(){
 				Get.time();
 			}, 1000);
 
-			// Каждые 10 секунд будем обновлять количество загрузок
+			// We'll update the number of downloads every 10 seconds.
 			var refresh = setInterval(function(){
 				Get.refresh();
 			}, 5000);
@@ -215,7 +215,7 @@
 		}
 
 		//*******************************************************************************************
-		// Создаём блок с чекбоксами
+		// Create a block with checkboxes
 		static checkbox(checkbox){
 			let html = `<table class=table_block>
 				<tr>
@@ -223,10 +223,10 @@
 					<td>Название</td>
 				</tr>`;
 
-			// Если есть список бирж, то покажем его
+			// If there is a list of exchanges, we'll show it to you
 			if(Object.keys(checkbox).length>0){
 				for (let key in checkbox) {
-					// Проверим состояние запуска загрузки для биржи
+					// Let's check the startup status of the download for the exchange
 					let img_start = 'Off';
 					if(checkbox[key]['act']){
 						img_start = 'On';
@@ -245,14 +245,14 @@
 		}
 
 		//*******************************************************************************************
-		// Что нужно сделать при старте.
+		// What you need to do at startup.
 		static start(){
 			Get.birzi();
 		}
 	}
  
 	//**********************************************************
-	//По окончании загрузки страницы, покажем настройки
+	//When the page has finished loading, we will show the settings
 	$(function(){
 		HTML.start();
 	});
