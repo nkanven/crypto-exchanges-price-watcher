@@ -3,22 +3,22 @@ import threading
 import time
 import MySQLdb
 import requests
-from http.server import HTTPServer, BaseHTTPRequestHandler # Веб сервер
-from urllib.parse import urlparse, parse_qs # Обработка адресной строки
-import shutil # Доступ к файлам
-import json # Обработка json
+from http.server import HTTPServer, BaseHTTPRequestHandler # Web server
+from urllib.parse import urlparse, parse_qs # Address bar processing
+import shutil # File access
+import json # Processing json
 
 
-# Массив всех наших бирж и их настроек
+# An array of all our exchanges and their settings
 class Setting:
     birzi = {
         "Binance": {
-            "auto_start":True, # Авто старт загрузки
-            "count_load":0, # Количество загрузок с момента старта
-            "icon":"Binance.png", # Иконка
-            "last_time":0, # Последнее успешная загрузка
-            "number":1, # Номер биржи в базе
-            "log":"" # Последнее сообщение после загрузки
+            "auto_start":True, # Auto load start
+            "count_load":0, # Number of downloads since the start
+            "icon":"Binance.png", # Icon
+            "last_time":0, # Last successful download
+            "number":1, # Exchange number in the database
+            "log":"" # Last message after uploading
             },
         "Gate": {
             "auto_start":True,
@@ -46,29 +46,29 @@ class Setting:
             }
     }
     
-    # Массив настроек
+    # Array of settings
     setting = {
-        "refreshTime":180, # Время повторной загрузки в секундах
-        "host":"localhost", # Хост для MySQL
-        "user":"root", # Логин MySQL
-        "passwd":"", # Пароль MySQL
-        "db":"price", # База MySQL
-        "checkbox": { # Все чекБоксы
-            "history_1m": { # Системное имя
-                "name": "Каждую минуту, но не более суток", # Название
-                "act" : False # Состояние при запуске
+        "refreshTime":180, # Reloading time in seconds
+        "host":"localhost", # Host for MySQL
+        "user":"root", # MySQL login
+        "passwd":"", # MySQL password
+        "db":"price", # MySQL database
+        "checkbox": { # All CheckBoxes
+            "history_1m": { # System name
+                "name": "Каждую минуту, но не более суток", # Title
+                "act" : False # Status at start-up
             },
             "history_10m": { # Системное имя
-                "name": "Каждые 10 минут, но не более суток", # Название
-                "act" : True # Состояние при запуске
+                "name": "Каждые 10 минут, но не более суток", # Title
+                "act" : True # Status at start-up
             },
             "history_1h": { # Системное имя
-                "name": "Каждый час, но не более суток", # Название
-                "act" : True # Состояние при запуске
+                "name": "Каждый час, но не более суток", # Title
+                "act" : True # Status at start-up
             },
-            "history_1d": { # Системное имя
-                "name": "Раз в день, всегда", # Название
-                "act" : True # Состояние при запуске
+            "history_1d": { # System name
+                "name": "Раз в день, всегда", # Title
+                "act" : True # Status at start-up
             }
         },
         "time_load": 0
@@ -90,7 +90,7 @@ class Img:
             shutil.copyfileobj(content, self.wfile)
 
 class API:
-    # Направляем в правильный путь 
+    # Guiding you on the right path
     def route(http, get_array):
         if('act' in get_array):
             if(get_array['act'][0]=='setting'):
@@ -109,46 +109,46 @@ class API:
         else:
            return API.Error(http, get_array) 
 
-    # Переключаем состоянии чекбокса в настройках
+    # Switching the state of the checkbox in the settings
     def checkboxOnOff(http, get_array):
-        # Сменим переключатель
+        # Let's change the switch
         if(Setting.setting['checkbox'][get_array['name'][0]]['act']):
             Setting.setting['checkbox'][get_array['name'][0]]['act'] = False
         else:
             Setting.setting['checkbox'][get_array['name'][0]]['act'] = True
-        # Отправим новые настройки
+        # We'll send the new settings
         API.send_json(http, Setting.setting['checkbox'])
 
-    # Отправим все чекбоксы в настройках
+    # Let's send all the checkboxes in the settings
     def checkbox(http):
         API.send_json(http, Setting.setting['checkbox'])
 
-    # Счетчик времени запуска загрузки скриптов            
+    # Script loading start time counter        
     def time_load(http):
         time_load = {
             "time_load":Setting.setting["refreshTime"] - Setting.setting["time_load"]
         }
         API.send_json(http, time_load)
 
-    # Переключаем загрузку биржи        
+    # Switching the exchange loading      
     def onoff(http, get_array):
-        # Сменим переключатель
+        # Let's change the switch
         if(Setting.birzi[get_array['name'][0]]['auto_start']):
             Setting.birzi[get_array['name'][0]]['auto_start'] = False
         else:
             Setting.birzi[get_array['name'][0]]['auto_start'] = True
-        # Отправим новые настройки
+        # We'll send the new settings
         API.send_json(http, Setting.birzi)
 
-    # Список бирж 
+    # List of exchanges
     def birzi(http):
         API.send_json(http, Setting.birzi)
 
-    # Список настроек
+    # Settings list
     def setting(http):
         API.send_json(http, Setting.setting)
     
-    # Отправим сообщение об ошибке
+    # Send an error message
     def Error(http, message): 
         error = {
             'code':'error',
@@ -156,7 +156,7 @@ class API:
         }
         API.send_json(http, error)
 
-    # Отправить сообщение в формате JSON    
+    # Send a message in JSON format   
     def send_json(http, message):
         http.send_response(200)
         http.send_header('Content-type', 'application/json; charset=UTF-8')
@@ -166,16 +166,16 @@ class API:
 
 class HTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        # Все переменные запроса GET положим в массив
+        # Let's put all GET request variables into an array
         get_array = parse_qs(urlparse(self.path).query)
 
-        # Работа с картинками
+        # Working with pictures
         if self.path.startswith("/img/"):
             Img.load_img(self)
-        # Подгрузим иконку
+        # Let's upload an icon
         elif self.path == "/favicon.ico":
             Img.load_favicon(self)
-        # Остальные пути обрабатываем здесь.
+        # The rest of the paths are processed here.
         elif self.path.startswith("/api/"):
             API.route(self, get_array)
         else:
@@ -190,121 +190,121 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(html.encode())
 
 class Birzi:
-    # Загрузка Binance
+    # Downloading Binance
     def Binance():
 
-        time_start = time.time() # Запомним время страта
+        time_start = time.time() # Let's remember the time of the strat
 
-        #Получим по ссылки данные с ценами.
-        price_list = requests.get("https://api.binance.com/api/v3/ticker/24hr").json() # Получим ответ в виде JSON формата
+        # Follow the link to get the data with prices.
+        price_list = requests.get("https://api.binance.com/api/v3/ticker/24hr").json() # We will get the answer in JSON format
 
-        # Если в сообщении есть код ошибки, то стоит прервать работу.
+        # If there is an error code in the message, it is worth aborting the job.
         if 'code' in price_list:
             print(f"Error code {price_list['code']} msg = {price_list['msg']}")
             return False
     
         price = []
-        # Переберём в цикле все торговые пары
+        # Let's loop through all trading pairs
         for symbol in price_list:
             try:
-                if float(symbol['lastPrice']) > 0: # Проверим наличие цены
+                if float(symbol['lastPrice']) > 0: # Let's check the price availability
                     price.append([symbol['symbol'],symbol['lastPrice']])
                     
             except Exception as inst:
-                print(inst) # Если ошибка доступа к результату
+                print(inst) # If there is an error accessing the result
 
         save_price(price, Setting.birzi['Binance']['number'])
 
-        # Сообщим о проделанной работе
+        # Let's report on progress
         
         Setting.birzi['Binance']["count_load"] += 1
-        Setting.birzi['Binance']["log"] = f"Загрузил Binance за {round(time.time()-time_start,3)} сек."
+        Setting.birzi['Binance']["log"] = f"Downloaded Binance for {round(time.time()-time_start,3)} sec."
         log(Setting.birzi['Binance']["log"],  Setting.birzi['Binance']['number'])
                 
-    # Загрузка Gate
+    # Loading Gate
     def Gate():
         time_start = time.time()
 
-        #Получим данные в виде JSON
+        # Get the data as JSON
         data = requests.get("https://api.gateio.ws/api/v4/spot/tickers/").json()
 
         price = []
-        #В цикле переберём каждую валюту.
+        # In the loop, let's go through each currency.
         for symbol in data:
             try:
                 price.append([symbol['currency_pair'],symbol['last']])        
             except Exception as inst:
-                print(inst) # Если ошибка доступа к результату
+                print(inst) # If there is an error accessing the result
 
         save_price(price,  Setting.birzi['Gate']['number'])
 
         Setting.birzi['Gate']["count_load"] += 1
-        Setting.birzi['Gate']["log"] = f"Загрузка Gate за {round(time.time()-time_start,3)} сек."
+        Setting.birzi['Gate']["log"] = f"Loading Gate for {round(time.time()-time_start,3)} sec."
         log(Setting.birzi['Gate']["log"], Setting.birzi['Gate']['number'])
 
-    # Загрузка Huobi
+    # Downloading Huobi
     def Huobi():
 
-        time_start = time.time() # Запомним время страта
+        time_start = time.time() # Let's remember the time of the strat
 
-        #Получим по ссылки данные с ценами.
-        price_list = requests.get("https://api.huobi.pro/market/tickers").json() # Получим ответ в виде JSON формата
+        # Let's get the data with prices from the link.
+        price_list = requests.get("https://api.huobi.pro/market/tickers").json() # We will get the answer in JSON format
         
         price = []
-        # Переберём в цикле все торговые пары
+        # Let's loop through all trading pairs
         for symbol in price_list['data']:
             price.append([symbol['symbol'],symbol['close']])
         
         save_price(price, Setting.birzi['Huobi']['number'])
 
-        # Сообщим о проделанной работе
+        # Let's report on progress
         Setting.birzi['Huobi']["count_load"] += 1
-        Setting.birzi['Huobi']["log"] = f"Загрузка Huobi за {round(time.time()-time_start,3)} сек."
+        Setting.birzi['Huobi']["log"] = f"Loading Huobi for{round(time.time()-time_start,3)} Sec."
         log(Setting.birzi['Huobi']["log"], Setting.birzi['Huobi']['number'])
 
-    # Загрузка KuCoin
+    # Loading KuCoin
     def KuCoin():
 
-        time_start = time.time() # Запомним время страта
+        time_start = time.time() # Let's remember the time of the strat
 
-        #Получим по ссылки данные с ценами.
-        price_list = requests.get("https://api.kucoin.com/api/v1/market/allTickers").json() # Получим ответ в виде JSON формата
+        # Let's get the data with prices from the link.
+        price_list = requests.get("https://api.kucoin.com/api/v1/market/allTickers").json() # We will get the answer in JSON format
 
         price = []
-        # Переберём в цикле все торговые пары
+        # Let's loop through all trading pairs
         for symbol in price_list['data']['ticker']:
             price.append([symbol['symbol'],symbol['last']])
             
         save_price(price, Setting.birzi['KuCoin']['number'])
-        # Сообщим о проделанной работе
+        # Let's report on progress
         Setting.birzi['KuCoin']["count_load"] += 1
-        Setting.birzi['KuCoin']["log"] = f"Загрузка KuCoin за {round(time.time()-time_start,3)} сек."
+        Setting.birzi['KuCoin']["log"] = f"Loading KuCoin for{round(time.time()-time_start,3)} Sec."
         log(Setting.birzi['KuCoin']["log"], Setting.birzi['KuCoin']['number'])
     
-#Подключение к базе данных
+# Database connection
 def connectDB():
     return MySQLdb.connect(host=Setting.setting["host"], user=Setting.setting["user"], passwd=Setting.setting["passwd"], db=Setting.setting["db"])
     
-# Рассчитаем разницу цен
+# Let's calculate the price difference
 def price_difference(new : string, old : string):
-    if new=='' or new=='0':# Цена не должна быть пустой или 0
+    if new=='' or new=='0':# The price must not be blank or 0
         return 0
     else:
-        # Переведем строки в числа
+        # Let's convert strings to numbers
         old = float(old)
         new = float(new)
         if old==0:
             return 0
         return round(((new - old) / old) * 100, 2)
 
-# Сохраним список цен под номером биржи
+# Let's save the list of prices under the exchange number
 def save_price(price : list, birza: int):
-    # Подключимся к базе данных
+    # Let's connect to the database
     conn = connectDB()
     cursor = conn.cursor()
 
-    # Создадим массив со старыми ценами для расчёта изменения цены за 24 часа
-    old_time = round(time.time())-86400+600 # Рассчитаем время - 24 часа в секундах
+    # Let's create an array with old prices to calculate the price change for 24 hours
+    old_time = round(time.time())-86400+600 # Let's calculate the time - 24 hours in seconds
     cursor.execute(f"SELECT `symbol`, `price`, MIN(`last_update`) FROM `price_history_10m` WHERE `birza` = {birza} AND `last_update` BETWEEN {old_time} AND ({old_time} + 700) GROUP BY `symbol` ; ")
     result = cursor.fetchall()
     crypto_price_old = {}
@@ -312,13 +312,13 @@ def save_price(price : list, birza: int):
         crypto_price_old[row[0]] = float(row[1])
 
     for symbol in price:
-        # Рассчитаем изменение цены в процентах
+        # Calculate the percentage change in price
         if symbol[0] in crypto_price_old:
             changes = price_difference(symbol[1],crypto_price_old[symbol[0]])
         else:
             changes = 0
         
-        cursor.execute(f"INSERT INTO `price` (`birza`, `symbol`, `price`) VALUES ({birza}, '{symbol[0]}', '{symbol[1]}') ON DUPLICATE KEY UPDATE price = '{symbol[1]}' , `prevDay` = {changes} ,last_update = UNIX_TIMESTAMP();") # Записать изменение цены
+        cursor.execute(f"INSERT INTO `price` (`birza`, `symbol`, `price`) VALUES ({birza}, '{symbol[0]}', '{symbol[1]}') ON DUPLICATE KEY UPDATE price = '{symbol[1]}' , `prevDay` = {changes} ,last_update = UNIX_TIMESTAMP();") # Record the change in price
 
         if(Setting.setting["checkbox"]["history_1h"]["act"]):
             cursor.execute(f"INSERT INTO `price_history_1h` (`birza`, `symbol`, `price`) VALUES ({birza}, '{symbol[0]}', {symbol[1]}) ON DUPLICATE KEY UPDATE price = {symbol[1]} , last_update = UNIX_TIMESTAMP();")
@@ -332,23 +332,23 @@ def save_price(price : list, birza: int):
     conn.commit()
     conn.close()
 
-# Бесконечный цикл для бирж
+# Infinite loop for exchanges
 def while_Birzi():
 
-    # Старт перенесём назад во времени, что бы первая загрузка произошла сразу
+    # Let's move the start back in time so that the first boot happens immediately
     start_time = round(time.time())-Setting.setting["refreshTime"]
 
     while True:
         timer = start_time+Setting.setting["refreshTime"] - round(time.time())
-        if timer <= 0:# Пора запускать
+        if timer <= 0:# It's time to launch
             loadAllBirzi()
             Setting.setting['time_load'] = 0
-            start_time = round(time.time()) # Сбросим время
-        else: # Ждем ещё секунду
+            start_time = round(time.time()) # Let's reset the clock
+        else: # We'll wait another second.
             Setting.setting['time_load'] +=1
             time.sleep(1)
 
-# Загружаем биржи
+# Uploading exchanges
 def loadAllBirzi():
     if(Setting.birzi['Binance']['auto_start']):
         threading.Thread(target = Birzi.Binance).start()
@@ -369,9 +369,9 @@ def log(message:string, birza:int):
 
 if __name__ == '__main__':
 
-    # Запустим бесконечный цикл для запуска бирж
+    # Let's start an infinite loop to run exchanges
     threading.Thread(target = while_Birzi).start()
 
-    # Запускаем web сервер для управления работой
+    # Start the web server to control the operation
     httpd = HTTPServer(('', 8000), HTTPRequestHandler)
     httpd.serve_forever()
