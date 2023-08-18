@@ -451,12 +451,12 @@ def load_exchanges():
     exchanges = Exchanges()
     if Setting.exchanges['Binance']['auto_start']:
         threading.Thread(target=exchanges.Binance).start()
-    # if Setting.exchanges['Gate']['auto_start']:
-    #     threading.Thread(target=exchanges.Gate).start()
-    # if Setting.exchanges['Huobi']['auto_start']:
-    #     threading.Thread(target=exchanges.Huobi).start()
-    # if Setting.exchanges['KuCoin']['auto_start']:
-    #     threading.Thread(target=exchanges.KuCoin).start()
+    if Setting.exchanges['Gate']['auto_start']:
+        threading.Thread(target=exchanges.Gate).start()
+    if Setting.exchanges['Huobi']['auto_start']:
+        threading.Thread(target=exchanges.Huobi).start()
+    if Setting.exchanges['KuCoin']['auto_start']:
+        threading.Thread(target=exchanges.KuCoin).start()
 
 
 def log(message: string, exchange_id: int):
