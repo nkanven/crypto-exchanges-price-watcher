@@ -225,10 +225,22 @@ class Exchanges:
 
             price = []
             # Let's loop through all trading pairs
+            # print(price_list)
+            # exit()
             for symbol in price_list:
                 try:
                     if float(symbol['lastPrice']) > 0:  # Let's check the price availability
-                        price.append([symbol['symbol'], symbol['lastPrice']])
+                        price.append(
+                            [
+                                symbol['symbol'],
+                                symbol['lastPrice'],
+                                symbol['bidPrice'],
+                                symbol['askPrice'],
+                                float(symbol['bidQty']),
+                                float(symbol['askQty']),
+                                symbol['volume']
+                            ]
+                        )
 
                 except Exception as inst:
                     print(inst)  # If there is an error accessing the result
@@ -254,7 +266,17 @@ class Exchanges:
         # In the loop, let's go through each currency.
         for symbol in data:
             try:
-                price.append([symbol['currency_pair'], symbol['last']])
+                price.append(
+                    [
+                        symbol['currency_pair'],
+                        symbol['last'],
+                        symbol['highest_bid'],
+                        symbol['lowest_ask'],
+                        symbol['base_volume'],
+                        symbol['quote_volume'],
+                        float(symbol['base_volume']) + float(symbol['quote_volume'])
+                    ]
+                )
             except Exception as inst:
                 print(inst)  # If there is an error accessing the result
 
@@ -276,7 +298,17 @@ class Exchanges:
         price = []
         # Let's loop through all trading pairs
         for symbol in price_list['data']:
-            price.append([symbol['symbol'], symbol['close']])
+            price.append(
+                [
+                    symbol['symbol'],
+                    symbol['close'],
+                    symbol['bid'],
+                    symbol['ask'],
+                    symbol['bidSize'],
+                    symbol['askSize'],
+                    symbol['vol']
+                ]
+            )
 
         save_price(price, Setting.exchanges['Huobi']['number'])
 
@@ -297,7 +329,17 @@ class Exchanges:
         price = []
         # Let's loop through all trading pairs
         for symbol in price_list['data']['ticker']:
-            price.append([symbol['symbol'], symbol['last']])
+            price.append(
+                [
+                    symbol['symbol'],
+                    symbol['last'],
+                    symbol['buy'],
+                    symbol['sell'],
+                    0.0,
+                    0.0,
+                    symbol['vol']
+                ]
+            )
 
         save_price(price, Setting.exchanges['KuCoin']['number'])
         # Let's report on progress
@@ -353,7 +395,7 @@ def save_price(price: list, exchange_id: int):
             cursor = db.cursor()
             # Let's create an array with old prices to calculate the price change for 24 hours
             old_time = round(time.time()) - 86400 + 600  # Let's calculate the time - 24 hours in seconds
-            query = f"SELECT `symbol`, MIN(`price`), MIN(`last_update`) FROM `price_history_10m` WHERE `birza` = {birza} AND `last_update` BETWEEN {old_time} AND ({old_time} + 700) GROUP BY `symbol` ; "
+            query = f"SELECT `symbol`, MIN(`price`), MIN(`last_update`) FROM `price_history_10m` WHERE `exchange_id` = {exchange_id} AND `last_update` BETWEEN {old_time} AND ({old_time} + 700) GROUP BY `symbol` ; "
             # print(query)
             cursor.execute(query)
             # print("Row count ", cursor.rowcount)
@@ -374,26 +416,15 @@ def save_price(price: list, exchange_id: int):
                     changes = 0
                 harmonized_symbol = re.sub(r"_|-|//", "", symbol[0].replace(" ", ""))
                 # This will clear the unread result from the cursor.
-                query = f"INSERT INTO `price` (`birza`, `symbol`, `price`, `harmonized_symbol`) VALUES ({exchange_id}, '{symbol[0]}', '{symbol[1]}', '{harmonized_symbol}') ON DUPLICATE KEY UPDATE price = '{symbol[1]}' , `prevDay` = {changes} ,last_update = CURRENT_TIMESTAMP;"
+                query = (f"INSERT INTO `price` (`exchange_id`, `symbol`, `price`, `bid`,  `ask`,  `bidqty`, `askqty`, "
+                         f"`volume`, `harmonized_symbol`) VALUES ({exchange_id}, '{symbol[0]}', {symbol[1]}, "
+                         f"{symbol[2]}, {symbol[3]}, {symbol[4]}, {symbol[5]}, {symbol[6]}, "
+                         f"'{harmonized_symbol}') ON DUPLICATE KEY UPDATE price = {symbol[1]}, `bid` = {symbol[2]}, "
+                         f"`ask` = {symbol[3]},  `bidqty` = {symbol[4]}, `askqty` = {symbol[5]}, `volume` = "
+                         f"{symbol[6]}, `prevDay` = {changes} ,last_update = CURRENT_TIMESTAMP;")
+
                 # print(query)
                 cursor.execute(query)  # Record the change in price
-
-                # if Setting.setting["checkbox"]["history_1h"]["act"]:
-                #     query = f"INSERT INTO `price_history_1h` (`birza`, `symbol`, `price`, `hour`) VALUES ({birza}, '{symbol[0]}', {symbol[1]}, {int(n_now.hour)}) ON DUPLICATE KEY UPDATE price = {symbol[1]} , last_update = CURRENT_TIMESTAMP;"
-                #     # print(query)
-                #     cursor.execute(query)
-                # if Setting.setting["checkbox"]["history_1d"]["act"]:
-                #     query = f"INSERT INTO `price_history_1d` (`birza`, `symbol`, `date_day`, `price`) VALUES ({birza}, '{symbol[0]}', NOW(), {symbol[1]}) ON DUPLICATE KEY UPDATE price = {symbol[1]} ;"
-                #     # print(query)
-                #     cursor.execute(query)
-                # if Setting.setting["checkbox"]["history_10m"]["act"]:
-                #     query = f"INSERT INTO `price_history_10m` (`birza`, `symbol`, `minut`, `price`) VALUES ({birza}, '{symbol[0]}', '{minute}', {symbol[1]}) ON DUPLICATE KEY UPDATE price = {symbol[1]} , last_update = CURRENT_TIMESTAMP;"
-                #     # print(query)
-                #     cursor.execute(query)
-                if Setting.setting["checkbox"]["history_1m"]["act"]:
-                    query = f"INSERT INTO `price_history_1m` (`exchange_id`, `symbol`, `minut`, `price`, `harmonized_symbol`) VALUES ({exchange_id}, '{symbol[0]}', '{minute}', {symbol[1]}, '{harmonized_symbol}') ON DUPLICATE KEY UPDATE price = {symbol[1]} , last_update = CURRENT_TIMESTAMP;"
-                    # print(query)
-                    cursor.execute(query)
                 db.commit()
     except Exception as e:
         logger.critical("Unknown error occurred 2", exc_info=True)
@@ -420,21 +451,21 @@ def load_exchanges():
     exchanges = Exchanges()
     if Setting.exchanges['Binance']['auto_start']:
         threading.Thread(target=exchanges.Binance).start()
-    if Setting.exchanges['Gate']['auto_start']:
-        threading.Thread(target=exchanges.Gate).start()
-    if Setting.exchanges['Huobi']['auto_start']:
-        threading.Thread(target=exchanges.Huobi).start()
-    if Setting.exchanges['KuCoin']['auto_start']:
-        threading.Thread(target=exchanges.KuCoin).start()
+    # if Setting.exchanges['Gate']['auto_start']:
+    #     threading.Thread(target=exchanges.Gate).start()
+    # if Setting.exchanges['Huobi']['auto_start']:
+    #     threading.Thread(target=exchanges.Huobi).start()
+    # if Setting.exchanges['KuCoin']['auto_start']:
+    #     threading.Thread(target=exchanges.KuCoin).start()
 
 
-def log(message: string, birza: int):
+def log(message: string, exchange_id: int):
     with connector.connect(host=Setting.setting["host"], user=Setting.setting["user"],
                            passwd=Setting.setting["passwd"], db=Setting.setting["db"]) as db:
         cursor = db.cursor()
-        cursor.execute(f"INSERT INTO `log` (`message`, `birza`, `time_create`) VALUES ('{message}', {birza}, CURRENT_TIMESTAMP);")
+        cursor.execute(f"INSERT INTO `log` (`message`, `exchange_id`, `time_create`) VALUES ('{message}', {exchange_id}, CURRENT_TIMESTAMP);")
         db.commit()
-    print(message)
+    # print(message)
 
 
 if __name__ == '__main__':
