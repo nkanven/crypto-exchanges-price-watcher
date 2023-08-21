@@ -236,8 +236,8 @@ class Exchanges:
                                 symbol['lastPrice'],
                                 symbol['bidPrice'],
                                 symbol['askPrice'],
-                                float(symbol['bidQty']),
-                                float(symbol['askQty']),
+                                symbol['bidQty'],
+                                symbol['askQty'],
                                 symbol['volume']
                             ]
                         )
@@ -274,7 +274,7 @@ class Exchanges:
                         symbol['lowest_ask'],
                         symbol['base_volume'],
                         symbol['quote_volume'],
-                        float(symbol['base_volume']) + float(symbol['quote_volume'])
+                        str(float(symbol['base_volume']) + float(symbol['quote_volume']))
                     ]
                 )
             except Exception as inst:
@@ -335,8 +335,8 @@ class Exchanges:
                     symbol['last'],
                     symbol['buy'],
                     symbol['sell'],
-                    0.0,
-                    0.0,
+                    '0.0',
+                    '0.0',
                     symbol['vol']
                 ]
             )
@@ -360,15 +360,19 @@ def connectDB():
                 # print(sql_file.read())
                 result_iterator = db.cursor().execute(sql_file.read(), multi=True)
                 for res in result_iterator:
-                    # print("Running query: ", res)  # Will print out a short representation of the query
+                    print("Running query: ", res)  # Will print out a short representation of the query
                     print(f"Affected {res.rowcount} rows")
     except ProgrammingError as inst:
+        print("Programming error ", inst)
         logger.critical("Database connection error occurred", exc_info=True)
     except MySQLInterfaceError as e:
+        print("MySQLInterface error ", e)
         logger.log(level=logging.INFO, msg="Unknown error occurred 4", exc_info=True)
     except InterfaceError as e:
+        print("InterfaceError error ", e)
         logger.info("Unknown error occurred 0", exc_info=True)
     except Exception as inst:
+        print("InterfaceError error ", inst)
         logger.critical("Unknown error occurred 1", exc_info=True)
 
 
@@ -395,7 +399,7 @@ def save_price(price: list, exchange_id: int):
             cursor = db.cursor()
             # Let's create an array with old prices to calculate the price change for 24 hours
             old_time = round(time.time()) - 86400 + 600  # Let's calculate the time - 24 hours in seconds
-            query = f"SELECT `symbol`, MIN(`price`), MIN(`last_update`) FROM `price_history_10m` WHERE `exchange_id` = {exchange_id} AND `last_update` BETWEEN {old_time} AND ({old_time} + 700) GROUP BY `symbol` ; "
+            query = f"SELECT `symbol`, MIN(`price`), MIN(`last_update`) FROM `price_history_1m` WHERE `exchange_id` = {exchange_id} AND `last_update` BETWEEN {old_time} AND ({old_time} + 700) GROUP BY `symbol` ; "
             # print(query)
             cursor.execute(query)
             # print("Row count ", cursor.rowcount)
@@ -408,8 +412,6 @@ def save_price(price: list, exchange_id: int):
             cursor = db.cursor()
             for symbol in price:
                 # Calculate the percentage change in price
-                n_now = datetime.datetime.now()
-                minute = f"{str(n_now.hour)}:{str(n_now.minute)}"
                 if symbol[0] in crypto_price_old:
                     changes = price_difference(symbol[1], crypto_price_old[symbol[0]])
                 else:
@@ -419,11 +421,16 @@ def save_price(price: list, exchange_id: int):
                 query = (f"INSERT INTO `price` (`exchange_id`, `symbol`, `price`, `bid`,  `ask`,  `bidqty`, `askqty`, "
                          f"`volume`, `harmonized_symbol`) VALUES ({exchange_id}, '{symbol[0]}', {symbol[1]}, "
                          f"{symbol[2]}, {symbol[3]}, {symbol[4]}, {symbol[5]}, {symbol[6]}, "
-                         f"'{harmonized_symbol}') ON DUPLICATE KEY UPDATE price = {symbol[1]}, `bid` = {symbol[2]}, "
+                         f"'{harmonized_symbol}') ON DUPLICATE KEY UPDATE exchange_id = {exchange_id}, price = {symbol[1]}, `bid` = {symbol[2]}, "
                          f"`ask` = {symbol[3]},  `bidqty` = {symbol[4]}, `askqty` = {symbol[5]}, `volume` = "
                          f"{symbol[6]}, `prevDay` = {changes} ,last_update = CURRENT_TIMESTAMP;")
 
-                # print(query)
+                queryii = (f"INSERT INTO `price` (`exchange_id`, `symbol`, `price`, `bid`,  `ask`,  `bidqty`, `askqty`, "
+                         f"`volume`, `harmonized_symbol`) VALUES ({exchange_id}, '{symbol[0]}', {symbol[1]}, "
+                         f"{symbol[2]}, {symbol[3]}, {symbol[4]}, {symbol[5]}, {symbol[6]}, "
+                         f"'{harmonized_symbol}')")
+
+                print(query)
                 cursor.execute(query)  # Record the change in price
                 db.commit()
     except Exception as e:
