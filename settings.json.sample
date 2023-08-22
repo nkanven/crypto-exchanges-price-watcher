@@ -1,0 +1,60 @@
+{
+  "refreshTime": 180,
+  "host": "",
+  "user": "",
+  "passwd": "",
+  "db": "exchange_prices",
+  "checkbox": {
+      "history_1m": {
+          "name": "Every minute, but no more than 24 hours",
+          "act": "False"
+      },
+      "history_10m": {
+          "name": "Every 10 minutes, but no more than 24 hours.",
+          "act": "True"
+      },
+      "history_1h": {
+          "name": "Every hour, but no more than 24 hours",
+          "act": "True"
+      },
+      "history_1d": {
+          "name": "Once a day, always.",
+          "act": "True"
+      }
+  },
+  "time_load": 0,
+  "exchanges": {
+    "Binance": {
+          "auto_start": "True",
+          "count_load": 0,
+          "icon": "Binance.png",
+          "last_time": 0,
+          "number": 1,
+          "log": ""
+      },
+      "Gate": {
+          "auto_start": "True",
+          "count_load": 0,
+          "icon": "Gate.png",
+          "last_time": 0,
+          "number": 2,
+          "log": ""
+      },
+      "Huobi": {
+          "auto_start": "True",
+          "count_load": 0,
+          "icon": "Huobi.png",
+          "last_time": 0,
+          "number": 3,
+          "log": ""
+      },
+      "KuCoin": {
+          "auto_start": "True",
+          "count_load": 0,
+          "icon": "KuCoin.png",
+          "last_time": 0,
+          "number": 4,
+          "log": ""
+      }
+  }
+}
